@@ -83,7 +83,255 @@ SELECT CEIL(123.1), FLOOR(123.9) FROM DUAL;
 SELECT TRUNC(123.456) FROM DUAL; -- 소숫점 아래 모두 절삭
 SELECT TRUNC(123.456, 1) FROM DUAL; -- 123.4 => 1 번째 자리 아래를 모두 절삭
 
+---------------------------------------------------------------
 
+-- 날짜(DATE) 관련 함수
+
+-- SYSDATE: 시스템 상 현재 시간 (년, 월, 일, 시, 분, 초)을 반환
+SELECT SYSDATE FROM DUAL; -- 2025-10-20 09:14:46.000
+
+-- SYSTIMESTAMP : SYSDATE + MS 단위 추가(UTC 정보)
+SELECT SYSTIMESTAMP FROM DUAL; -- 2025-10-20 09:16:16.964 +0900
+
+-- MONTHS_BETWEEN(날짜, 날짜) : 두 날짜의 개월 수 차이 반환
+SELECT ABS(ROUND(MONTHS_BETWEEN(SYSDATE, '2026-02-27'), 1))
+AS "수강 기간(개월)" FROM DUAL; -- 4.2
+
+-- EMPLOYEE 테이블에서 사원의 이름, 입사일, 근무한 개월 수, 연차 조회
+SELECT EMP_NAME, HIRE_DATE,
+CEIL(MONTHS_BETWEEN(SYSDATE, HIRE_DATE)) "근무한 개월 수",
+CEIL(MONTHS_BETWEEN(SYSDATE, HIRE_DATE) / 12) || '년 차' "근속 연 수"
+FROM EMPLOYEE;
+
+-- || : 연결 연산자 (문자열 이어쓰기)
+
+-- ADD_MONTHS(날짜, 숫자) : 날짜에 숫자만큼의 개월 수를 더함 (음수도 가능)
+SELECT ADD_MONTHS(SYSDATE, 4) FROM DUAL; -- 2026-02-20 09:30:17.000 (4개월 뒤)
+SELECT ADD_MONTHS(SYSDATE, -1) FROM DUAL; -- 1개월 전
+
+-- LAST_DAY(날짜) : 해당 달의 마지막 날짜를 구함
+SELECT LAST_DAY(SYSDATE) FROM DUAL; -- 2025-10-31 09:33:25.000
+SELECT LAST_DAY('2020-02-01') FROM DUAL; -- 2020-02-29 00:00:00.000
+-- 문자열이지만 날짜 형태면 DATE로 알아서 자동형변환
+
+-- EXTRACT() : 년, 월, 일 정보를 추출하여 반환
+-- EXTRACT(YEAR FROM 날짜) : 해당 날짜에서 연도만 추출
+-- EXTRACT(MONTH FROM 날짜) : 해당 날짜에서 월만 추출
+-- EXTRACT(DAY FROM 날짜) : 해당 날짜에서 일만 추출
+
+-- EMPLOYEE 테이블에서 각 사원의 이름, 입사일 조회(연, 월, 일)
+SELECT EMP_NAME, EXTRACT(YEAR FROM HIRE_DATE) || '년 '
+|| EXTRACT(MONTH FROM HIRE_DATE) || '월 '
+|| EXTRACT(DAY FROM HIRE_DATE) || '일' AS 입사일
+FROM EMPLOYEE; 
+
+---------------------------------------------------------------
+
+-- 형변환 함수
+-- 문자열(CHAR), 숫자(NUMBER), 날짜(DATE)끼리 형변환 가능
+
+-- 문자열로 변환
+-- TO_CHAR(날짜, [포맷]) : 날짜형 데이터를 문자형 데이터로 변경
+-- TO_CHAR(숫자, [포맷]) : 숫자형 데이터를 문자형 데이터로 변경
+
+-- 숫자 -> 문자 변환 시 포맷의 패턴
+-- 9 : 숫자 한 칸을 의미, 여러 개 작성 시 오른쪽 정렬
+-- 0 : 숫자 한 칸을 의미, 여러 개 작성 시 오른쪽 정렬 + 빈칸 0으로 채움
+-- L : 현재 DB에 설정된 나라의 화폐 기호
+
+SELECT TO_CHAR(1234) FROM DUAL; -- '1234'
+SELECT TO_CHAR(1234, '99999') FROM DUAL; -- ' 1234'
+-- 다섯 칸 확보 후 오른쪽 정렬 thus 앞자리 한칸 비움
+SELECT TO_CHAR(1234, '00000') FROM DUAL; -- '01234'
+-- 다섯 칸 확보 후 빈칸을 0으로 채움
+
+SELECT TO_CHAR(1000000, '9,999,999') || '원' FROM DUAL;
+SELECT TO_CHAR(1000000, 'L9,999,999') FROM DUAL; -- ￦1,000,000
+
+-- 날짜 -> 문자 변환 시 포맷의 패턴
+-- YYYY : 년도 / YY : 년도(두 자리만)
+-- MM : 월
+-- DD : 일
+-- AM / PM : 오전/오후
+-- HH : 시간 / HH24 : 24시간 표기
+-- MI : 분 / SS : 초
+-- DAY : 요일(전체) / DY : 요일(요일명만 표시 ex) 월)
+
+-- 2025/10/20 10:06:30
+SELECT TO_CHAR(SYSDATE, 'YYYY/MM/DD HH24:MI:SS DAY') FROM DUAL;
+
+-- 10/20 (월)
+SELECT TO_CHAR(SYSDATE, 'MM/DD (DY)') FROM DUAL;
+
+-- 2025년 10월 20일 (월)
+SELECT TO_CHAR(SYSDATE, 'YYYY년 MM월 DD일 (DY)') FROM DUAL;
+-- ORA-01821: 날짜 형식이 부적합합니다
+SELECT TO_CHAR(SYSDATE, 'YYYY"년" MM"월" DD"일" (DY)') FROM DUAL;
+-- "" 쌍따옴표를 이용해 단순한 문자로 인식시키면 해결!
+
+------------------------------------------------------------------
+
+-- 날짜로 변환 TO_DATE
+-- TO_DATE(문자, [포맷]) : 문자형 -> 날짜
+-- TO_DATE(숫자, [포맷]) : 숫자형 -> 날짜
+-- => 지정된 포맷으로 날짜를 인식
+
+SELECT TO_DATE('2025-10-20') FROM DUAL; -- 2025-10-20 00:00:00.000
+SELECT TO_DATE(20251020) FROM DUAL; -- 2025-10-20 00:00:00.000
+
+SELECT TO_DATE('251020 101730') FROM DUAL;
+-- ORA-01861: 리터럴이 형식 문자열과 일치하지 않음 => 뭔 말인지 모르겠다
+SELECT TO_DATE('251020 101730', 'YYMMDD HH24MISS') FROM DUAL;
+-- 2025-10-20 10:17:30.000
+-- => 패턴을 적용해 작성된 문자열의 각 문자가 어떤 날짜 형식인지 반드시 인식 시켜야!
+
+-- Y 패턴 : 현재 세기(21세기 == 20xx년도 == 2000 년대)
+-- R 패턴 : 1세기 기준으로 절반(50년) 이상인 경우 이전 세기(1900 년대)로
+--		 절반 미만인 경우 현재 세기(2000 년대)로 나타냄
+
+SELECT TO_DATE('800505', 'YYMMDD') FROM DUAL; -- 2080년도
+SELECT TO_DATE('800505', 'RRMMDD') FROM DUAL; -- 1980년도
+SELECT TO_DATE('490505', 'RRMMDD') FROM DUAL; -- 2049년도
+
+-- EMPLOYEE 테이블에서 각 직원이 태어난 생년월일 조회
+-- 사원이름, 생년월일(ex) 1965년 10월 8일)
+SELECT * FROM EMPLOYEE;
+
+-- 1) 주민번호(EMP_NO)에서 - 앞 글자까지 추출
+SELECT EMP_NAME,
+SUBSTR(EMP_NO, 1, INSTR(EMP_NO, '-') - 1) AS 생년월일
+FROM EMPLOYEE; -- 주민번호 앞자리(생년월일)
+
+-- 2) 위에서 추출한 생년월일을 TO_DATE 타입으로 변환 => RR 패턴을 이용하기 위해
+SELECT EMP_NAME,
+TO_DATE(SUBSTR(EMP_NO, 1, INSTR(EMP_NO, '-') - 1), 'RRMMDD') AS 생년월일
+FROM EMPLOYEE;
+
+-- 3) TO_CHAR 이용해 문자열로 다시 변환 => 'xxxx년 xx월 xx일' 형식으로 만들기 위해
+SELECT EMP_NAME,
+TO_CHAR(TO_DATE(SUBSTR(EMP_NO, 1, INSTR(EMP_NO, '-') - 1), 'RRMMDD'),
+'YYYY"년" MM"월" DD"일"') AS 생년월일
+FROM EMPLOYEE;
+
+--------------------------------------------------------------------
+
+-- 숫자 형변환
+-- TO_NUMBER(문자, [포맷]) : 문자형 -> 숫자
+-- cf) 날짜 -> 숫자 시 TO_CHAR(날짜) 이용해 문자형으로 변환 후
+-- 	TO_NUMBER(문자)로 숫자로 변환
+
+SELECT '1,000,000' + 500000 FROM DUAL;
+-- ORA-01722: 수치가 부적합합니다 bcuz ',' 때문에 완전한 문자열로만 인식되어서
+
+SELECT TO_NUMBER('1,000,000', '9,999,999') + 500000 FROM DUAL;
+
+-------------------------------------------------------------------
+
+-- NULL 처리 함수
+
+-- NVL(컬럼명, 컬럼값이 NULL일 때 바꿀 값) : NULL인 컬럼값을 다른 값으로 변경할 때
+-- cf) NULL과 산술 연산 시 결과는 무조건 NULL
+SELECT EMP_NAME, SALARY, NVL(BONUS, 0),
+SALARY * NVL(BONUS, 0) FROM EMPLOYEE;
+
+-- NVL2(컬럼명, 바꿀 값1, 바꿀 값2)
+-- 해당 컬럼의 값이 있으면 바꿀 값1, NULL이면 바꿀 값2로 변경
+
+-- EMPLOYEE 테이블에서 보너스를 받으면 'O', 안 받으면 'X' 조회
+SELECT EMP_NAME, NVL2(BONUS, 'O', 'X') "보너스 수령 여부"
+FROM EMPLOYEE;
+
+--------------------------------------------------------------------
+
+-- 선택 함수
+-- : 여러가지 경우에 따라 알맞은 결과를 선택할 수 있음
+
+-- DECODE(계산식 | 컬럼명,
+-- 조건값1, 선택값1, 조건값2, 선택값2 ..., 아무 것도 일치하지 않을 때)
+-- 비교하고자 하는 값 또는 컬럼이 조건식과 같으면 결과값 반환 (switch문과 흡사)
+
+-- 직원 성별 구하기
+SELECT EMP_NAME,
+DECODE(SUBSTR(EMP_NO, 8, 1), '1', '남', '2', '여')
+성별 FROM EMPLOYEE;
+
+-- 직원의 급여 인상
+-- 직급 코드가 J7인 직원은 20% 인상,
+-- J6인 직원은 15%, J5는 10%, 그 외는 5% 인상
+-- 이름, 직급코드, 급여, 인상률, 인상된 급여 조회
+
+SELECT EMP_NAME, JOB_CODE, SALARY,
+DECODE(JOB_CODE, 'J7', '20%', 'J6', '15%', 'J5', '10%', '5%') "인상률",
+DECODE(JOB_CODE, 'J7', SALARY * 1.2, 'J6', SALARY * 1.15,
+'J5', SALARY * 1.1, SALARY * 1.05) "인상된 급여"
+FROM EMPLOYEE;
+
+-- CASE 표현식 (CASE WHEN 문) => if문과 흡사
+-- CASE WHEN 조건식 THEN 결과값
+--		WHEN 조건식 THEN 결과값
+--		ELSE 결과값
+-- END
+
+-- => 비교하고자 하는 값 또는 컬럼이 조건식과 같으면 결과값 반환
+--	 조건은 범위값 가능
+
+-- EMPLOYEE 테이블에서 급여가 5백 만원 이상이면 '대',
+-- 3백 만원 이상 5백 만원 미만이면 '중'
+-- 3백 만원 미만 '소'로 조회
+-- 사원이름, 급여, 급여 수준 조회
+
+SELECT EMP_NAME, SALARY,
+CASE WHEN SALARY >= 5000000 THEN '대' -- if
+	 WHEN SALARY >= 3000000 THEN '중' -- else if
+	 ELSE '소' -- else
+END "급여 수준" FROM EMPLOYEE;
+
+--------------------------------------------------------------------
+
+-- 그룹 함수
+-- 하나 이상으 ㅣ행을 그룹으로 묶어 연산하여 총합, 평균 등의
+-- 1개의 결과 행으로 반환하는 함수
+
+-- SUM(숫자가 기록된 컬럼명) : 합계
+-- 모든 직원의 급여 합 조회
+SELECT SUM(SALARY) FROM EMPLOYEE; -- 70,096,240
+-- => 23개의 데이터가 1개의 결과로 반환
+
+-- AVG(숫자가 기록된 컬럼명) : 평균
+-- 모든 직원의 급여 평균 조회
+SELECT ROUND(AVG(SALARY)) FROM EMPLOYEE;
+
+-- 부서코드가 'D9'인 사원들의 / 급여 합, 평균 조회
+--		WHERE절				SELECT절
+/*3*/SELECT SUM(SALARY), ROUND(AVG(SALARY))
+/*1*/FROM EMPLOYEE /*2*/WHERE DEPT_CODE = 'D9';
+
+-- MIN(컬럼명) : 최솟값
+-- MAX(컬럼명) : 최댓값
+-- => 데이터 타입 제한 없음(숫자 : 대/소 | 날짜 : 과거/미래 | 문자 : 문자 순서)
+
+-- 급여 최솟값, 가장 빠른 입사일, 알파벳 순서가 가장 빠른 이메일 조회
+SELECT MIN(SALARY), MIN(HIRE_DATE), MIN(EMAIL)
+FROM EMPLOYEE;
+
+-- 급여 최댓값, 가장 늦은 입사일, 알파벳 순서 상 가장 뒤에 있는 이메일 조회
+SELECT MAX(SALARY), MAX(HIRE_DATE), MAX(EMAIL)
+FROM EMPLOYEE;
+
+-- EMPLOYEE 테이블에서 급여를 가장 많이 받는 사원의
+-- 이름, 급여, 직급코드 조회
+SELECT MAX(SALARY) FROM EMPLOYEE; -- 서브쿼리 + 그룹함수
+-- 가장 큰 급여 조회
+SELECT EMP_NAME, SALARY, JOB_CODE
+FROM EMPLOYEE
+WHERE SALARY = (SELECT MAX(SALARY) FROM EMPLOYEE);
+
+-- COUNT() : 행의 갯수를 세어 반환
+-- COUNT(컬럼명) : NULL을 제외하고 실제로 값이 기록된 행의 갯수만 반환
+-- COUNT(*) : NULL 포함 전체 행의 갯수 반환
+-- COUNT(DISTINCT 컬럼명) : 중복을 제거한 행의 갯수 반환
+
+SELECT COUNT(*) FROM EMPLOYEE; -- 23
 
 
 
