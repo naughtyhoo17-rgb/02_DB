@@ -105,10 +105,30 @@ WHERE ROLE = 'RESOURCE';
 
 ------------------------------------------------------------------
 
+-- 객체 권한
+
+-- kh / sample 사용자 계정끼리 서로 객체 접근 권한 부여
+
+-- 1. (sample) kh 계정의 EMPLOYEE 테이블 조회
+SELECT * FROM kh_psm.EMPLOYEE;
+-- ORA-00942: 테이블 또는 뷰가 존재하지 않습니다
+-- => sample 계정은 kh 계정의 테이블 접근 권한이 없어 조회 불가
+
+-- 2. (kh) sample 계정에 EMPLOYEE 테이블 조회 권한 부여
+-- [객체 권한 부여 방법]
+-- GRANT 객체권한 ON 객체명 TO 사용자명;
+GRANT SELECT ON EMPLOYEE TO psm_sample;
+
+-- 3. (sample) 다시 kh 계정의 EMPLOYEE 테이블 조회
+SELECT * FROM kh_psm.EMPLOYEE;
+-- => 권한을 부여받아 조회 가능.
+
+-- 4. (kh) sample 계정에 부여했던 EMPLOYEE 테이블 조회 권한 회수 : REVOKE
+REVOKE SELECT ON EMPLOYEE FROM psm_sample;
+
+-- 5. (sample) kh의 EMPLOYEE 테이블 조회 권한 회수 확인
+SELECT * FROM kh_psm.EMPLOYEE;
+-- ORA-00942: 테이블 또는 뷰가 존재하지 않습니다 => 조회 불가능 (권한 회수 done)
 
 
-
-
-
-
-
+S
